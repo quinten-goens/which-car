@@ -149,3 +149,28 @@ footer { color: var(--text-muted); font-size: 12px; margin-top: 24px; }
 .prose code { font-size: 12.5px; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
 
 [hidden] { display: none !important; }
+
+/* sticky compare tray */
+.tray { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface-1);
+  border-top: 1px solid var(--border); box-shadow: 0 -6px 24px rgba(0,0,0,.10);
+  padding: 10px 20px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.tray-in { max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.tray .chip { display: inline-flex; align-items: center; gap: 6px; }
+.tray-hint { font-size: 13px; }
+.tray-actions { margin-left: auto; display: flex; gap: 8px; }
+.tray .btn.primary { font-weight: 600; padding: 7px 16px; }
+body.has-tray .wrap { padding-bottom: 110px; }
+.btn:disabled { opacity: .45; cursor: default; }
+
+/* best models per age */
+.best { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px 20px; }
+.best-age h3 { font-size: 13px; margin: 0 0 4px; }
+.best-age ol { list-style: none; margin: 0; padding: 0; }
+.best-age .pick { width: 100%; display: grid; grid-template-columns: 12px 1fr auto 44px; gap: 8px; align-items: center;
+  border: 0; border-bottom: 1px solid var(--grid); background: transparent; color: var(--text-primary);
+  font: inherit; font-size: 13px; padding: 6px 2px; cursor: pointer; text-align: left; }
+.best-age .pick:hover { background: var(--chip); }
+.best-age .pick .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.best-age .pick .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.best-age .pick b.v { color: var(--text-primary); }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }

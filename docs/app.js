@@ -1,4 +1,4 @@
-// GOCA Barometer dashboard: overview + head-to-head tabs. Depends on i18n.js and common.js.
+// GOCA Barometer dashboard: overview + compare tabs. Depends on i18n.js and common.js.
 "use strict";
 const SVGNS = "http://www.w3.org/2000/svg";
 const SERIES = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
@@ -7,8 +7,9 @@ const geo = (xs) => (xs.length ? Math.exp(xs.reduce((a, x) => a + Math.log(x), 0
 let D;
 const state = {
   tab: "overview", ages: new Set(), minBrand: 3, q: "", sort: { key: "score", dir: 1 },
-  picked: [], rubModel: null, rubAge: null,
-  h2h: { mode: "models", a: null, b: null, rubAge: null },
+  rankMode: "best", // "best" | "worst" in the per-age card
+  picked: [], // up to 2 model slugs: A and B — shared by the table, the tray and the Compare tab
+  h2h: { mode: "models", ba: null, bb: null, rubAge: null }, // ba/bb = brands in brand mode
 };
 
 // ---------- formatting (locale-aware)
@@ -225,31 +226,60 @@ function renderTable(c) {
   });
 }
 
+
+// ---------- picking models (max 2: A and B) + the sticky compare tray
+const MAX_PICK = 2;
+function setPicked(list) {
+  state.picked = [...new Set(list.filter((s) => s && modelBySlug(s)))].slice(0, MAX_PICK);
+  writeHash();
+}
 function togglePick(slug) {
   const i = state.picked.indexOf(slug);
   if (i >= 0) state.picked.splice(i, 1);
-  else { if (state.picked.length >= 3) state.picked.shift(); state.picked.push(slug); }
-  state.rubModel = i < 0 ? slug : state.picked.includes(state.rubModel) ? state.rubModel : state.picked[state.picked.length - 1] || null;
+  else { if (state.picked.length >= MAX_PICK) state.picked.shift(); state.picked.push(slug); }
   writeHash(); render();
 }
 
-function renderCompare() {
+function renderTray() {
+  const tray = $("#tray");
   const models = state.picked.map(modelBySlug).filter(Boolean);
-  $("#picked").innerHTML = models.length
-    ? models.map((m, i) => `<button class="chip" data-slug="${m.slug}" title="✕"><i class="dot" style="background:${SERIES[i]}"></i>${esc(m.model)} ✕</button>`).join("")
-      + (models.length >= 2 ? ` <button class="btn primary" id="toH2h">${esc(t("open_h2h"))}</button>` : "")
-    : `<span class="muted">${esc(t("compare_empty"))}</span>`;
-  $("#picked").querySelectorAll("button.chip").forEach((b) => b.addEventListener("click", () => togglePick(b.dataset.slug)));
-  $("#toH2h")?.addEventListener("click", () => {
-    Object.assign(state.h2h, { mode: "models", a: models[0].slug, b: models[1].slug });
-    setTab("h2h"); scrollTo({ top: 0, behavior: "smooth" });
-  });
-  $("#lineLegend").innerHTML = `<span><i class="ln" style="background:var(--avg)"></i>${esc(t("avg_series"))}</span>` +
-    models.map((m, i) => `<span><i class="ln" style="background:${SERIES[i]}"></i>${esc(m.model)}</span>`).join("");
-  drawLine($("#lineChart"), [avgSeries(), ...models.map((m, i) => ({
-    name: m.model, color: SERIES[i], vals: D.ages.map((a) => m.classes[a]?.pct ?? null),
-    extra: D.ages.map((a) => (m.classes[a]?.km ? `${fmtInt(m.classes[a].km)} km` : null)),
-  }))], t("compare_h"));
+  const show = state.tab === "overview" && models.length > 0;
+  tray.hidden = !show; document.body.classList.toggle("has-tray", show);
+  if (!show) return;
+  tray.innerHTML = `<div class="tray-in">
+    <span class="lbl">${esc(t("tray_label"))}</span>
+    ${models.map((m, i) => `<button class="chip" data-slug="${m.slug}" title="✕"><i class="dot" style="background:${SERIES[i]}"></i>${esc(m.model)} ✕</button>`).join("")}
+    ${models.length === 1 ? `<span class="muted tray-hint">${esc(t("tray_one"))}</span>` : ""}
+    <span class="tray-actions">
+      <button class="btn" id="trayClear">${esc(t("f_clear"))}</button>
+      <button class="btn primary" id="trayGo">${esc(t(models.length === 1 ? "tray_go1" : "tray_go2"))}</button>
+    </span></div>`;
+  tray.querySelectorAll("button.chip").forEach((b) => b.addEventListener("click", () => togglePick(b.dataset.slug)));
+  $("#trayClear").addEventListener("click", () => { setPicked([]); render(); });
+  $("#trayGo").addEventListener("click", () => { state.h2h.mode = "models"; setTab("h2h"); scrollTo({ top: 0, behavior: "smooth" }); });
+}
+
+// ---------- best models per age (fills the space next to the brand chart)
+function renderBest() {
+  const worst = state.rankMode === "worst", box = $("#bestList");
+  $("#bestHead").innerHTML = esc(t(worst ? "worst_h" : "best_h")) + infoBtn(worst ? "i_worst" : "i_best");
+  $("#bestSub").textContent = t(worst ? "worst_sub" : "best_sub");
+  const tg = $("#bestToggle");
+  tg.innerHTML = ["best", "worst"].map((m) => `<button type="button" data-rank="${m}" aria-pressed="${state.rankMode === m}">${esc(t("rank_" + m))}</button>`).join("");
+  tg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { state.rankMode = b.dataset.rank; renderBest(); }));
+  box.innerHTML = selAges().map((a) => {
+    const avg = D.class_avg[a].pct;
+    const top = D.models.filter((m) => m.classes[a]).map((m) => ({ m, r: m.classes[a].pct / avg }))
+      .sort((x, y) => (worst ? y.r - x.r : x.r - y.r)).slice(0, 3);
+    return `<div class="best-age"><h3>${esc(ageLabel(a))} <span class="muted">· ${esc(t("col_avg"))} ${fmtPct(avg)}</span></h3>
+      <ol>${top.map(({ m, r }) => {
+        const pi = state.picked.indexOf(m.slug);
+        return `<li><button class="pick${pi >= 0 ? " on" : ""}" data-slug="${m.slug}" aria-pressed="${pi >= 0}">
+          <i class="dot" style="background:${pi >= 0 ? SERIES[pi] : "transparent"};border:1px solid ${pi >= 0 ? "transparent" : "var(--text-muted)"}"></i>
+          <span class="nm">${esc(m.model)}</span><span class="v">${fmtPct(m.classes[a].pct)}</span><b class="v">${fmtRel(r)}</b></button></li>`;
+      }).join("")}</ol></div>`;
+  }).join("");
+  box.querySelectorAll("button.pick").forEach((b) => b.addEventListener("click", () => togglePick(b.dataset.slug)));
 }
 
 function rubricTable(rows) {
@@ -267,21 +297,7 @@ function rubricTable(rows) {
     <td>${cp && mp >= cp * 1.25 ? `<span class="flag">${esc(t("weak"))}</span>${infoBtn("i_weak")}` : ""}</td></tr>`).join("")}</tbody>`;
 }
 
-function renderRubrics() {
-  const models = state.picked.map(modelBySlug).filter(Boolean);
-  const mt = $("#rubModelTabs"), at = $("#rubAgeTabs"), tb = $("#rubTable");
-  if (!models.length) { mt.innerHTML = at.innerHTML = ""; tb.innerHTML = `<tbody><tr><td class="muted">${esc(t("rub_empty"))}</td></tr></tbody>`; return; }
-  const m = models.find((x) => x.slug === state.rubModel) || models[models.length - 1];
-  mt.innerHTML = models.length > 1 ? models.map((x, i) => `<button class="chip" aria-pressed="${x === m}" data-slug="${x.slug}"><i class="dot" style="background:${SERIES[i]}"></i> ${esc(x.model)}</button>`).join("") : "";
-  mt.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { state.rubModel = b.dataset.slug; renderRubrics(); }));
-  const ages = D.ages.filter((a) => m.rubrics[a]);
-  const age = ages.includes(state.rubAge) ? state.rubAge : ages[0];
-  at.innerHTML = ages.map((a) => `<button class="chip" aria-pressed="${a === age}" data-age="${esc(a)}">${esc(ageLabel(a))}</button>`).join("");
-  at.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { state.rubAge = b.dataset.age; renderRubrics(); }));
-  tb.innerHTML = rubricTable(m.rubrics[age] || []);
-}
-
-// ======================================================= HEAD TO HEAD
+// ======================================================= COMPARE (models or brands)
 function entity(kind, id, color) {
   const ages = selAges();
   if (kind === "models") {
@@ -304,30 +320,31 @@ function entity(kind, id, color) {
 }
 
 function h2hDefaults() {
-  const h = state.h2h;
-  const okModel = (s) => !!modelBySlug(s), brands = [...new Set(D.models.map((m) => m.brand))];
+  const h = state.h2h, brands = [...new Set(D.models.map((m) => m.brand))];
   if (h.mode === "models") {
-    if (!okModel(h.a)) h.a = okModel("volkswagen-golf") ? "volkswagen-golf" : D.models[0].slug;
-    if (!okModel(h.b)) h.b = okModel("toyota-yaris") ? "toyota-yaris" : D.models[1].slug;
+    if (!state.picked.length) setPicked(["volkswagen-golf", "toyota-yaris"].filter(modelBySlug).length ? ["volkswagen-golf", "toyota-yaris"] : [D.models[0].slug, D.models[1].slug]);
   } else {
-    if (!brands.includes(h.a)) h.a = brands.includes("Toyota") ? "Toyota" : brands[0];
-    if (!brands.includes(h.b)) h.b = brands.includes("Volkswagen") ? "Volkswagen" : brands[1];
+    if (!brands.includes(h.ba)) h.ba = brands.includes("Toyota") ? "Toyota" : brands[0];
+    if (!brands.includes(h.bb)) h.bb = brands.includes("Volkswagen") ? "Volkswagen" : brands[1];
   }
 }
 
-function options(mode, selected) {
+function options(mode, selected, allowNone) {
   if (mode === "brands") {
     return [...new Set(D.models.map((m) => m.brand))].sort((a, b) => a.localeCompare(b))
       .map((b) => `<option value="${esc(b)}" ${b === selected ? "selected" : ""}>${esc(b)}</option>`).join("");
   }
   const byBrand = new Map();
   D.models.forEach((m) => byBrand.set(m.brand, [...(byBrand.get(m.brand) || []), m]));
-  return [...byBrand].map(([b, ms]) => `<optgroup label="${esc(b)}">${ms.map((m) =>
-    `<option value="${m.slug}" ${m.slug === selected ? "selected" : ""}>${esc(m.model)}</option>`).join("")}</optgroup>`).join("");
+  return (allowNone ? `<option value="" ${!selected ? "selected" : ""}>${esc(t("h2h_none_opt"))}</option>` : "") +
+    [...byBrand].map(([b, ms]) => `<optgroup label="${esc(b)}">${ms.map((m) =>
+      `<option value="${m.slug}" ${m.slug === selected ? "selected" : ""}>${esc(m.model)}</option>`).join("")}</optgroup>`).join("");
 }
 
 function renderH2H() {
   const h = state.h2h; h2hDefaults();
+  const isBrand = h.mode === "brands";
+  const selA = isBrand ? h.ba : state.picked[0], selB = isBrand ? h.bb : state.picked[1] || "";
   const root = $("#h2h");
   root.innerHTML = `
   <section class="card">
@@ -337,69 +354,87 @@ function renderH2H() {
       <span class="seg" role="group">${["models", "brands"].map((m) => `<button type="button" data-mode="${m}" aria-pressed="${h.mode === m}">${esc(t("h2h_" + m))}</button>`).join("")}</span>${infoBtn("i_h2h_mode")}
     </div>
     <div class="vs">
-      <div class="side"><label for="selA"><i class="dot" style="background:${SERIES[0]}"></i>A</label><select id="selA">${options(h.mode, h.a)}</select></div>
-      <button class="btn" id="swap" title="${esc(t("h2h_swap"))}">⇄ ${esc(t("h2h_swap"))}</button>
-      <div class="side"><label for="selB"><i class="dot" style="background:${SERIES[1]}"></i>B</label><select id="selB">${options(h.mode, h.b)}</select></div>
+      <div class="side"><label for="selA"><i class="dot" style="background:${SERIES[0]}"></i>A</label><select id="selA">${options(h.mode, selA, false)}</select></div>
+      <button class="btn" id="swap" title="${esc(t("h2h_swap"))}" ${!selB ? "disabled" : ""}>⇄ ${esc(t("h2h_swap"))}</button>
+      <div class="side"><label for="selB"><i class="dot" style="background:${SERIES[1]}"></i>B</label><select id="selB">${options(h.mode, selB, !isBrand)}</select></div>
     </div>
   </section>
   <div id="h2hBody"></div>`;
   root.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
     if (h.mode === b.dataset.mode) return;
-    h.mode = b.dataset.mode; h.a = h.b = null; writeHash(); renderH2H();
+    h.mode = b.dataset.mode; writeHash(); renderH2H();
   }));
-  $("#selA").addEventListener("change", (e) => { h.a = e.target.value; writeHash(); renderH2H(); });
-  $("#selB").addEventListener("change", (e) => { h.b = e.target.value; writeHash(); renderH2H(); });
-  $("#swap").addEventListener("click", () => { [h.a, h.b] = [h.b, h.a]; writeHash(); renderH2H(); });
+  $("#selA").addEventListener("change", (e) => {
+    if (isBrand) h.ba = e.target.value; else setPicked([e.target.value, state.picked[1] === e.target.value ? state.picked[0] : state.picked[1]]);
+    writeHash(); renderH2H();
+  });
+  $("#selB").addEventListener("change", (e) => {
+    if (isBrand) h.bb = e.target.value;
+    else setPicked(e.target.value === state.picked[0] ? [e.target.value, state.picked[1]] : [state.picked[0], e.target.value]);
+    writeHash(); renderH2H();
+  });
+  $("#swap").addEventListener("click", () => {
+    if (isBrand) [h.ba, h.bb] = [h.bb, h.ba]; else setPicked([state.picked[1], state.picked[0]]);
+    writeHash(); renderH2H();
+  });
 
   const body = $("#h2hBody");
-  if (h.a === h.b) { body.innerHTML = `<section class="card"><p>${esc(t("h2h_same"))}</p></section>`; return; }
-  const A = entity(h.mode, h.a, SERIES[0]), B = entity(h.mode, h.b, SERIES[1]);
+  if (isBrand && h.ba === h.bb) { body.innerHTML = `<section class="card"><p>${esc(t("h2h_same"))}</p></section>`; return; }
+  const A = entity(h.mode, selA, SERIES[0]);
+  const B = selB ? entity(h.mode, selB, SERIES[1]) : null;
+  const ents = [A, B].filter(Boolean);
   const ages = selAges();
 
-  // verdict: only ages where both have data
-  const common = ages.filter((a) => A.per[a] && B.per[a]);
   let verdict;
-  if (!common.length) verdict = esc(t("h2h_none"));
+  if (!B) verdict = esc(t("h2h_single"));
   else {
-    const r = geo(common.map((a) => A.per[a].pct / B.per[a].pct));
-    const better = r <= 1 ? [A, B, 1 - r] : [B, A, 1 - 1 / r];
-    const n = Math.round(better[2] * 100);
-    verdict = (n < 2 ? t("h2h_equal", { a: esc(A.name), b: esc(B.name) })
-      : t("h2h_better", { a: `<span style="color:${better[0].color}">●</span> ${esc(better[0].name)}`, b: esc(better[1].name), n }))
-      + " " + esc(t("h2h_common", { k: common.length }));
+    const common = ages.filter((a) => A.per[a] && B.per[a]);
+    if (!common.length) verdict = esc(t("h2h_none"));
+    else {
+      const r = geo(common.map((a) => A.per[a].pct / B.per[a].pct));
+      const better = r <= 1 ? [A, B, 1 - r] : [B, A, 1 - 1 / r];
+      const n = Math.round(better[2] * 100);
+      verdict = (n < 2 ? t("h2h_equal", { a: esc(A.name), b: esc(B.name) })
+        : t("h2h_better", { a: `<span style="color:${better[0].color}">●</span> ${esc(better[0].name)}`, b: esc(better[1].name), n }))
+        + " " + esc(t("h2h_common", { k: common.length }));
+    }
   }
   const scoreTile = (E) => `<div class="tile" style="--c:${E.color}">${infoBtn("i_h2h_score")}
       <span>${esc(E.name)}</span><b>${E.score == null ? "—" : fmtRel(E.score)}</b>
       <span>${esc(E.score == null ? "" : relWords(E.score))} · ${esc(t("h2h_nages", { n: E.nAges }))}${E.kind === "brands" ? " · " + esc(t("h2h_nmodels", { n: E.models.length })) : ""}</span></div>`;
 
-  const isBrand = h.mode === "brands";
   const cell = (E, a) => {
     const p = E.per[a];
     if (!p) return `<td class="na" data-na="1">—</td>`;
     return `<td class="r">${fmtPct(p.pct)}${isBrand ? ` <span class="muted">(${p.n})</span>` : ""}</td>`;
   };
-  const tableRows = D.ages.filter((a) => state.ages.has(a)).map((a) => {
-    const pa = A.per[a], pb = B.per[a];
-    let win = "—";
-    if (pa && pb) {
-      const d = Math.abs(pa.pct - pb.pct) < 0.05;
-      const w = pa.pct < pb.pct ? A : B;
-      win = d ? esc(t("tie")) : `<span style="color:${w.color}">●</span> ${esc(w.name)} <span class="muted">(${fmtRel(Math.min(pa.pct, pb.pct) / Math.max(pa.pct, pb.pct))})</span>`;
+  const tableRows = selAges().map((a) => {
+    let win = "";
+    if (B) {
+      const pa = A.per[a], pb = B.per[a];
+      win = "—";
+      if (pa && pb) {
+        const w = pa.pct < pb.pct ? A : B;
+        win = Math.abs(pa.pct - pb.pct) < 0.05 ? esc(t("tie"))
+          : `<span style="color:${w.color}">●</span> ${esc(w.name)} <span class="muted">(${fmtRel(Math.min(pa.pct, pb.pct) / Math.max(pa.pct, pb.pct))})</span>`;
+      }
+      win = `<td>${win}</td>`;
     }
-    return `<tr><td>${esc(ageLabel(a))}</td>${cell(A, a)}${cell(B, a)}<td class="r">${fmtPct(D.class_avg[a].pct)}</td>
-      <td class="r">${pa?.km ? fmtInt(pa.km) : "—"}</td><td class="r">${pb?.km ? fmtInt(pb.km) : "—"}</td><td>${win}</td></tr>`;
+    return `<tr><td>${esc(ageLabel(a))}</td>${ents.map((E) => cell(E, a)).join("")}<td class="r">${fmtPct(D.class_avg[a].pct)}</td>
+      ${ents.map((E) => `<td class="r">${E.per[a]?.km ? fmtInt(E.per[a].km) : "—"}</td>`).join("")}<td class="r">${fmtInt(D.class_avg[a].km)}</td>${win}</tr>`;
   }).join("");
   const ageInfo = isBrand ? "i_col_brand_age" : "i_h2h_table";
+  const dotName = (E) => `<i class="dot" style="background:${E.color}"></i> ${esc(E.name)}`;
 
   body.innerHTML = `
   <section class="card">
-    <h2>${esc(t("tab_h2h"))}${infoBtn("i_h2h_verdict")}</h2>
+    <h2>${esc(t("h2h_verdict_h"))}${B ? infoBtn("i_h2h_verdict") : ""}</h2>
     <p class="verdict">${verdict}</p>
-    <div class="scorebox">${scoreTile(A)}${scoreTile(B)}</div>
+    <div class="scorebox">${ents.map(scoreTile).join("")}</div>
   </section>
   <section class="card">
     <h2>${esc(t("h2h_chart_h"))}${infoBtn(isBrand ? "i_h2h_chart_brands" : "i_h2h_chart_models")}</h2>
-    <div class="legend"><span><i class="ln" style="background:var(--avg)"></i>${esc(t("avg_series"))}</span><span><i class="ln" style="background:${A.color}"></i>${esc(A.name)}</span><span><i class="ln" style="background:${B.color}"></i>${esc(B.name)}</span></div>
+    <div class="legend"><span><i class="ln" style="background:var(--avg)"></i>${esc(t("avg_series"))}</span>${ents.map((E) => `<span><i class="ln" style="background:${E.color}"></i>${esc(E.name)}</span>`).join("")}</div>
     <div class="scroll" id="h2hLine"></div>
   </section>
   <section class="card">
@@ -407,17 +442,16 @@ function renderH2H() {
     <div class="legend"><span>${esc(t("leg_na"))}</span>${infoBtn("i_na")}</div>
     <div class="scroll"><table>
       <thead><tr>${th(esc(t("col_age")), null, { sortable: false })}
-        ${th(`<i class="dot" style="background:${A.color}"></i> ${esc(A.name)}`, ageInfo, { sortable: false, cls: "r" })}
-        ${th(`<i class="dot" style="background:${B.color}"></i> ${esc(B.name)}`, ageInfo, { sortable: false, cls: "r" })}
+        ${ents.map((E) => th(dotName(E), ageInfo, { sortable: false, cls: "r" })).join("")}
         ${th(esc(t("col_avg_full")), "i_rub_col_class", { sortable: false, cls: "r" })}
-        ${th(esc(t("col_kmA", { x: "A" })), "i_col_km", { sortable: false, cls: "r" })}
-        ${th(esc(t("col_kmA", { x: "B" })), "i_col_km", { sortable: false, cls: "r" })}
-        ${th(esc(t("col_winner")), "i_col_winner", { sortable: false })}</tr></thead>
+        ${ents.map((E, i) => th(esc(t("col_kmA", { x: i ? "B" : "A" })), "i_col_km", { sortable: false, cls: "r" })).join("")}
+        ${th(esc(t("col_km_avg")), "i_col_km", { sortable: false, cls: "r" })}
+        ${B ? th(esc(t("col_winner")), "i_col_winner", { sortable: false }) : ""}</tr></thead>
       <tbody>${tableRows}</tbody></table></div>
   </section>
   <div id="h2hDetail"></div>`;
 
-  drawLine($("#h2hLine"), [avgSeries(), ...[A, B].map((E) => ({
+  drawLine($("#h2hLine"), [avgSeries(), ...ents.map((E) => ({
     name: E.name, color: E.color, vals: D.ages.map((a) => E.per[a]?.pct ?? null),
     extra: D.ages.map((a) => (E.per[a]?.km ? `${fmtInt(E.per[a].km)} km` + (isBrand ? ` · ${t("h2h_nmodels", { n: E.per[a].n })}` : "") : null)),
   }))], t("h2h_chart_h"));
@@ -425,7 +459,26 @@ function renderH2H() {
     td.addEventListener("mousemove", (e) => showTip(e, t("i_na"))); td.addEventListener("mouseleave", hideTip);
   });
 
-  if (isBrand) renderBrandDetail(A, B); else renderModelRubrics(A, B);
+  if (isBrand) renderBrandDetail(A, B);
+  else if (B) renderModelRubrics(A, B);
+  else renderSingleRubrics(A);
+}
+
+function ageChipsFor(ages, age) {
+  return `<div class="tabs">${ages.map((a) => `<button class="chip" aria-pressed="${a === age}" data-age="${esc(a)}">${esc(ageLabel(a))}</button>`).join("")}</div>`;
+}
+
+function renderSingleRubrics(A) {
+  const h = state.h2h, box = $("#h2hDetail");
+  const ages = selAges().filter((a) => A.model.rubrics[a]);
+  if (!ages.length) { box.innerHTML = ""; return; }
+  const age = ages.includes(h.rubAge) ? h.rubAge : ages[0];
+  box.innerHTML = `<section class="card">
+    <h2>${esc(t("rub_h"))}${infoBtn("i_rub")}</h2>
+    <p class="sub">${esc(t("rub_sub"))} <span class="flag">${esc(t("weak"))}</span>${infoBtn("i_weak")}</p>
+    ${ageChipsFor(ages, age)}
+    <div class="scroll"><table>${rubricTable(A.model.rubrics[age])}</table></div></section>`;
+  box.querySelectorAll("[data-age]").forEach((b) => b.addEventListener("click", () => { h.rubAge = b.dataset.age; renderSingleRubrics(A); }));
 }
 
 function renderModelRubrics(A, B) {
@@ -448,7 +501,7 @@ function renderModelRubrics(A, B) {
   box.innerHTML = `<section class="card">
     <h2>${esc(t("h2h_rub_h"))}${infoBtn("i_h2h_rub")}</h2>
     <p class="sub">${esc(t("h2h_rub_sub"))}</p>
-    <div class="tabs">${ages.map((a) => `<button class="chip" aria-pressed="${a === age}" data-age="${esc(a)}">${esc(ageLabel(a))}</button>`).join("")}</div>
+    ${ageChipsFor(ages, age)}
     <div class="scroll"><table>
       <thead><tr>${th(esc(t("rub_col_rubric")), "i_rub_col_rubric", { sortable: false })}
         ${th(`<i class="dot" style="background:${A.color}"></i> ${esc(A.name)}`, "i_rub_col_model", { sortable: false, cls: "r" })}
@@ -490,24 +543,27 @@ function renderBrandDetail(A, B) {
   };
   $("#h2hDetail").innerHTML = `<section class="card">
     <h2>${esc(t("h2h_models_h"))}${infoBtn("i_h2h_models")}</h2>
-    <div class="grid2" style="margin-top:10px">${col(A)}${col(B)}</div></section>`;
+    <div class="grid2" style="margin-top:10px">${col(A)}${B ? col(B) : ""}</div></section>`;
 }
 
 // ======================================================= wiring
 function writeHash() {
   const p = new URLSearchParams();
-  if (state.tab === "h2h") { p.set("tab", "h2h"); p.set("mode", state.h2h.mode); if (state.h2h.a) p.set("a", state.h2h.a); if (state.h2h.b) p.set("b", state.h2h.b); }
+  if (state.tab === "h2h") {
+    p.set("tab", "compare"); p.set("mode", state.h2h.mode);
+    if (state.h2h.mode === "brands") { p.set("a", state.h2h.ba); p.set("b", state.h2h.bb); }
+  }
   if (state.picked.length) p.set("m", state.picked.join(","));
   const s = p.toString();
   history.replaceState(null, "", location.pathname + location.search + (s ? "#" + s : ""));
 }
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  if (p.get("tab") === "h2h") state.tab = "h2h";
+  if (["h2h", "compare"].includes(p.get("tab"))) state.tab = "h2h";
   if (["models", "brands"].includes(p.get("mode"))) state.h2h.mode = p.get("mode");
-  state.h2h.a = p.get("a"); state.h2h.b = p.get("b");
-  if (p.get("m")) state.picked = p.get("m").split(",").filter((s) => modelBySlug(s)).slice(0, 3);
-  state.rubModel = state.picked[state.picked.length - 1] || null;
+  if (state.h2h.mode === "brands") { state.h2h.ba = p.get("a"); state.h2h.bb = p.get("b"); }
+  const m = p.get("m") ? p.get("m").split(",") : [p.get("a"), p.get("b")]; // older links used a/b for models
+  state.picked = m.filter((s) => s && modelBySlug(s)).slice(0, MAX_PICK);
 }
 
 function setTab(tab) {
@@ -545,8 +601,9 @@ function render() {
   hideTip();
   if (state.tab === "overview") {
     const c = compute();
-    renderTiles(c); renderBrands(c); renderTable(c); renderCompare(); renderRubrics();
+    renderTiles(c); renderBrands(c); renderBest(); renderTable(c);
   } else renderH2H();
+  renderTray();
 }
 
 function init(data) {

@@ -57,11 +57,9 @@
       </section>
 
       <section class="card">
-        <h2><span data-i="compare_h"></span><span data-tip-static="i_compare"></span></h2>
-        <p class="sub" data-i="compare_sub"></p>
-        <div class="picked" id="picked"></div>
-        <div class="legend" id="lineLegend"></div>
-        <div class="scroll" id="lineChart"></div>
+        <div class="card-head"><h2 id="bestHead"></h2><span class="seg" role="group" id="bestToggle"></span></div>
+        <p class="sub" id="bestSub"></p>
+        <div class="best" id="bestList"></div>
       </section>
     </div>
 
@@ -77,13 +75,6 @@
       <div class="tablebox scroll"><table id="modelTable"></table></div>
     </section>
 
-    <section class="card">
-      <h2><span data-i="rub_h"></span><span data-tip-static="i_rub"></span></h2>
-      <p class="sub"><span data-i="rub_sub"></span> <span class="flag" data-i="weak"></span><span data-tip-static="i_weak"></span></p>
-      <div class="tabs" id="rubModelTabs"></div>
-      <div class="tabs" id="rubAgeTabs"></div>
-      <div class="scroll"><table id="rubTable"></table></div>
-    </section>
   </div>
 
   <!-- ================= head-to-head tab ================= -->
@@ -98,5 +89,6 @@
 
   <footer><span id="footer"></span> · <a href="about.html" data-i="nav_about"></a></footer>
 </div>
+<div id="tray" class="tray" hidden aria-live="polite"></div>
 </body>
 </html>

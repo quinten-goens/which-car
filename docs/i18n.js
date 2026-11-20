@@ -479,7 +479,7 @@ Object.assign(window.I18N.en, {
   <li>For each model and age class: <code>model defect % ÷ average defect % of all cars that age</code>. 0.6 means 40% fewer defects than average.</li>
   <li>A model’s <b>score</b> combines these ratios over the selected ages with a geometric mean, which is the right average for ratios.</li>
   <li>A <b>brand score</b> pools all model × age ratios of the brand in the same way.</li>
-  <li><b>Head to head</b> compares two models or brands only at the ages where both have data, so age can’t skew the result.</li>
+  <li>The <b>Compare</b> tab compares two models or brands only at the ages where both have data, so age can’t skew the result.</li>
   <li>Defect category names were translated from Dutch, following the European roadworthiness rules (Directive 2014/45/EU).</li>
 </ul>
 <h2>5. Hosting</h2>
@@ -511,7 +511,7 @@ Object.assign(window.I18N.nl, {
   <li>Per model en leeftijdsklasse: <code>gebreken-% model ÷ gemiddeld gebreken-% van alle auto’s van die leeftijd</code>. 0,6 betekent 40% minder gebreken dan gemiddeld.</li>
   <li>De <b>score</b> van een model combineert die verhoudingen over de gekozen leeftijden met een meetkundig gemiddelde, het juiste gemiddelde voor verhoudingen.</li>
   <li>Een <b>merkscore</b> bundelt alle verhoudingen model × leeftijd van het merk op dezelfde manier.</li>
-  <li><b>Eén tegen één</b> vergelijkt twee modellen of merken enkel op de leeftijden waarvoor beide gegevens hebben, zodat leeftijd het resultaat niet vertekent.</li>
+  <li>Het tabblad <b>Vergelijken</b> vergelijkt twee modellen of merken enkel op de leeftijden waarvoor beide gegevens hebben, zodat leeftijd het resultaat niet vertekent.</li>
 </ul>
 <h2>5. Hosting</h2>
 <p>De code staat in een GitHub-repository. Bij elke wijziging bouwt een GitHub Actions-workflow het gegevensbestand opnieuw en publiceert de site via GitHub Pages.</p>
@@ -542,7 +542,7 @@ Object.assign(window.I18N.fr, {
   <li>Pour chaque modèle et classe d’âge : <code>% de défauts du modèle ÷ % moyen de défauts de toutes les voitures de cet âge</code>. 0,6 signifie 40 % de défauts en moins que la moyenne.</li>
   <li>Le <b>score</b> d’un modèle combine ces rapports sur les âges choisis par une moyenne géométrique, la moyenne adaptée aux rapports.</li>
   <li>Le <b>score d’une marque</b> regroupe de la même façon tous les rapports modèle × âge de la marque.</li>
-  <li>Le <b>face à face</b> compare deux modèles ou marques uniquement aux âges où les deux ont des données, pour que l’âge ne fausse pas le résultat.</li>
+  <li>L’onglet <b>Comparer</b> compare deux modèles ou marques uniquement aux âges où les deux ont des données, pour que l’âge ne fausse pas le résultat.</li>
   <li>Les noms des catégories de défauts ont été traduits du néerlandais, d’après les règles européennes de contrôle technique (directive 2014/45/UE).</li>
 </ul>
 <h2>5. Hébergement</h2>
@@ -574,7 +574,7 @@ Object.assign(window.I18N.de, {
   <li>Für jedes Modell und jede Altersklasse: <code>Mängel-% des Modells ÷ durchschnittliche Mängel-% aller Autos dieses Alters</code>. 0,6 bedeutet 40 % weniger Mängel als der Durchschnitt.</li>
   <li>Der <b>Score</b> eines Modells kombiniert diese Verhältnisse über die gewählten Altersklassen mit einem geometrischen Mittel, dem passenden Mittelwert für Verhältnisse.</li>
   <li>Ein <b>Markenscore</b> fasst alle Verhältnisse Modell × Alter der Marke auf dieselbe Weise zusammen.</li>
-  <li>Der <b>Direktvergleich</b> vergleicht zwei Modelle oder Marken nur in den Altersklassen, in denen beide Daten haben, damit das Alter das Ergebnis nicht verzerrt.</li>
+  <li>Der Reiter <b>Vergleichen</b> vergleicht zwei Modelle oder Marken nur in den Altersklassen, in denen beide Daten haben, damit das Alter das Ergebnis nicht verzerrt.</li>
   <li>Die Namen der Mängelkategorien wurden aus dem Niederländischen übersetzt, gemäß den europäischen Vorschriften zur technischen Überwachung (Richtlinie 2014/45/EU).</li>
 </ul>
 <h2>5. Hosting</h2>
@@ -583,4 +583,92 @@ Object.assign(window.I18N.de, {
 <p>Das Erhebungsskript, die Datenprüfungen, dieses Dashboard, seine Übersetzungen und Hilfetexte wurden mit <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a> umgesetzt, dem KI-Programmierassistenten von Anthropic, nach den Anweisungen des Autors der Seite. Da KI im Spiel war, sind kleine Fehler möglich. Prüfen Sie im Zweifel die Zahlen im ursprünglichen Barometer.</p>
 <h2>7. Haftungsausschluss</h2>
 <p>Dies ist ein unabhängiges Projekt, nicht mit GOCA Vlaanderen verbunden. Daten wie am {d} erhoben. Prüfergebnisse sind ein Hinweis auf den Zustand eines Autos unter mehreren. Sie sagen nichts über Pannen zwischen den Prüfungen, Reparaturkosten oder Unfallsicherheit.</p>`,
+});
+
+// ---- compare tray, best-per-age card, single-model compare view
+Object.assign(window.I18N.en, {
+  tab_h2h: "Compare", h2h_verdict_h: "Verdict",
+  step3: "Tick one or two models and press Compare to see them side by side",
+  tray_label: "Compare:", tray_one: "Tick a second model to compare, or",
+  tray_go1: "View details →", tray_go2: "Compare side by side →",
+  h2h_none_opt: "— none (show model A only) —",
+  h2h_single: "Showing one model. Pick a second model in B to compare them side by side.",
+  h2h_intro: "Compare two models or two brands side by side, for the car ages selected above. Models you tick in the overview appear here automatically.",
+  models_sub: "Sorted from fewest to most defects relative to cars of the same age. Click a column header to sort, tick up to 2 models to compare them.",
+  i_col_cmp: "Tick up to 2 models. A bar appears at the bottom of the screen – press <b>Compare</b> there to see them side by side.",
+  col_km_avg: "km average",
+  best_h: "Best models per age",
+  best_sub: "The 3 models with the fewest defects compared with cars of the same age. Click one to add it to the comparison.",
+  i_best: "For each selected age class: the 3 models whose defect rate is furthest below the average for that age. The first number is the model’s defect rate, the second how it compares with the average.<br><br><b>Limits:</b><ul><li>Each list looks at one age class only – a model can do well at one age and less well at another. Check its other ages in the table or in Compare.</li><li>Only models with ≥ 500 inspections in that age class are included.</li></ul>",
+});
+Object.assign(window.I18N.nl, {
+  tab_h2h: "Vergelijken", h2h_verdict_h: "Oordeel",
+  step3: "Vink één of twee modellen aan en klik op Vergelijk om ze naast elkaar te zien",
+  tray_label: "Vergelijk:", tray_one: "Vink een tweede model aan om te vergelijken, of",
+  tray_go1: "Bekijk details →", tray_go2: "Vergelijk naast elkaar →",
+  h2h_none_opt: "— geen (toon enkel model A) —",
+  h2h_single: "Er wordt één model getoond. Kies een tweede model bij B om ze naast elkaar te vergelijken.",
+  h2h_intro: "Vergelijk twee modellen of twee merken naast elkaar, voor de leeftijden die je hierboven koos. Modellen die je in het overzicht aanvinkt, verschijnen hier automatisch.",
+  models_sub: "Gesorteerd van minste naar meeste gebreken tegenover auto’s van dezelfde leeftijd. Klik op een kolomtitel om te sorteren, vink tot 2 modellen aan om ze te vergelijken.",
+  i_col_cmp: "Vink tot 2 modellen aan. Onderaan het scherm verschijnt een balk – klik daar op <b>Vergelijk</b> om ze naast elkaar te zien.",
+  col_km_avg: "km gemiddelde",
+  best_h: "Beste modellen per leeftijd",
+  best_sub: "De 3 modellen met de minste gebreken tegenover auto’s van dezelfde leeftijd. Klik op een model om het aan de vergelijking toe te voegen.",
+  i_best: "Per gekozen leeftijdsklasse: de 3 modellen waarvan het gebrekenpercentage het verst onder het gemiddelde van die leeftijd ligt. Het eerste getal is het gebrekenpercentage van het model, het tweede de vergelijking met het gemiddelde.<br><br><b>Beperkingen:</b><ul><li>Elke lijst kijkt naar één leeftijdsklasse – een model kan op de ene leeftijd goed scoren en op een andere minder. Bekijk de andere leeftijden in de tabel of bij Vergelijken.</li><li>Enkel modellen met ≥ 500 keuringen in die leeftijdsklasse tellen mee.</li></ul>",
+});
+Object.assign(window.I18N.fr, {
+  tab_h2h: "Comparer", h2h_verdict_h: "Verdict",
+  step3: "Cochez un ou deux modèles et cliquez sur Comparer pour les voir côte à côte",
+  tray_label: "Comparer :", tray_one: "Cochez un second modèle pour comparer, ou",
+  tray_go1: "Voir le détail →", tray_go2: "Comparer côte à côte →",
+  h2h_none_opt: "— aucun (afficher seulement le modèle A) —",
+  h2h_single: "Un seul modèle est affiché. Choisissez un second modèle en B pour les comparer côte à côte.",
+  h2h_intro: "Comparez deux modèles ou deux marques côte à côte, pour les âges choisis ci-dessus. Les modèles cochés dans la vue d’ensemble apparaissent ici automatiquement.",
+  models_sub: "Triés du moins au plus de défauts par rapport aux voitures du même âge. Cliquez sur un en-tête pour trier, cochez jusqu’à 2 modèles pour les comparer.",
+  i_col_cmp: "Cochez jusqu’à 2 modèles. Une barre apparaît en bas de l’écran – cliquez sur <b>Comparer</b> pour les voir côte à côte.",
+  col_km_avg: "km moyenne",
+  best_h: "Meilleurs modèles par âge",
+  best_sub: "Les 3 modèles avec le moins de défauts par rapport aux voitures du même âge. Cliquez sur un modèle pour l’ajouter à la comparaison.",
+  i_best: "Pour chaque classe d’âge choisie : les 3 modèles dont le taux de défauts est le plus en dessous de la moyenne de cet âge. Le premier chiffre est le taux du modèle, le second l’écart par rapport à la moyenne.<br><br><b>Limites :</b><ul><li>Chaque liste ne regarde qu’une classe d’âge – un modèle peut être bon à un âge et moins bon à un autre. Vérifiez ses autres âges dans le tableau ou dans Comparer.</li><li>Seuls les modèles avec ≥ 500 contrôles dans cette classe d’âge sont inclus.</li></ul>",
+});
+Object.assign(window.I18N.de, {
+  tab_h2h: "Vergleichen", h2h_verdict_h: "Fazit",
+  step3: "Haken Sie ein oder zwei Modelle an und klicken Sie auf Vergleichen, um sie nebeneinander zu sehen",
+  tray_label: "Vergleichen:", tray_one: "Haken Sie ein zweites Modell an, oder",
+  tray_go1: "Details ansehen →", tray_go2: "Nebeneinander vergleichen →",
+  h2h_none_opt: "— keins (nur Modell A anzeigen) —",
+  h2h_single: "Es wird ein Modell angezeigt. Wählen Sie bei B ein zweites Modell, um beide nebeneinander zu vergleichen.",
+  h2h_intro: "Vergleichen Sie zwei Modelle oder zwei Marken nebeneinander, für die oben gewählten Altersklassen. In der Übersicht angehakte Modelle erscheinen hier automatisch.",
+  models_sub: "Sortiert von wenigsten zu meisten Mängeln im Vergleich zu Autos gleichen Alters. Klicken Sie auf eine Spaltenüberschrift zum Sortieren, haken Sie bis zu 2 Modelle zum Vergleichen an.",
+  i_col_cmp: "Haken Sie bis zu 2 Modelle an. Unten am Bildschirm erscheint eine Leiste – klicken Sie dort auf <b>Vergleichen</b>, um sie nebeneinander zu sehen.",
+  col_km_avg: "km Durchschnitt",
+  best_h: "Beste Modelle je Alter",
+  best_sub: "Die 3 Modelle mit den wenigsten Mängeln im Vergleich zu Autos gleichen Alters. Klicken Sie auf ein Modell, um es zum Vergleich hinzuzufügen.",
+  i_best: "Für jede gewählte Altersklasse: die 3 Modelle, deren Mängelquote am weitesten unter dem Durchschnitt dieses Alters liegt. Die erste Zahl ist die Mängelquote des Modells, die zweite der Vergleich mit dem Durchschnitt.<br><br><b>Grenzen:</b><ul><li>Jede Liste betrachtet nur eine Altersklasse – ein Modell kann in einem Alter gut und in einem anderen weniger gut abschneiden. Prüfen Sie die anderen Altersklassen in der Tabelle oder unter Vergleichen.</li><li>Nur Modelle mit ≥ 500 Prüfungen in dieser Altersklasse sind enthalten.</li></ul>",
+});
+
+// ---- best / worst switch on the per-age card
+Object.assign(window.I18N.en, {
+  rank_best: "Best", rank_worst: "Worst",
+  worst_h: "Worst models per age",
+  worst_sub: "The 3 models with the most defects compared with cars of the same age. Click one to add it to the comparison.",
+  i_worst: "For each selected age class: the 3 models whose defect rate is furthest above the average for that age. The first number is the model’s defect rate, the second how it compares with the average.<br><br><b>Limits:</b><ul><li>Each list looks at one age class only – a model can do badly at one age and better at another. Check its other ages in the table or in Compare.</li><li>Only models with ≥ 500 inspections in that age class are included.</li><li>A high defect rate can also reflect how a model is used (e.g. as a taxi or delivery car) and how well owners maintain it.</li></ul>",
+});
+Object.assign(window.I18N.nl, {
+  rank_best: "Beste", rank_worst: "Slechtste",
+  worst_h: "Slechtste modellen per leeftijd",
+  worst_sub: "De 3 modellen met de meeste gebreken tegenover auto’s van dezelfde leeftijd. Klik op een model om het aan de vergelijking toe te voegen.",
+  i_worst: "Per gekozen leeftijdsklasse: de 3 modellen waarvan het gebrekenpercentage het verst boven het gemiddelde van die leeftijd ligt. Het eerste getal is het gebrekenpercentage van het model, het tweede de vergelijking met het gemiddelde.<br><br><b>Beperkingen:</b><ul><li>Elke lijst kijkt naar één leeftijdsklasse – een model kan op de ene leeftijd slecht scoren en op een andere beter. Bekijk de andere leeftijden in de tabel of bij Vergelijken.</li><li>Enkel modellen met ≥ 500 keuringen in die leeftijdsklasse tellen mee.</li><li>Een hoog gebrekenpercentage kan ook komen door hoe een model gebruikt wordt (bv. als taxi of bestelwagen) en hoe goed eigenaars het onderhouden.</li></ul>",
+});
+Object.assign(window.I18N.fr, {
+  rank_best: "Meilleurs", rank_worst: "Moins bons",
+  worst_h: "Modèles les moins bons par âge",
+  worst_sub: "Les 3 modèles avec le plus de défauts par rapport aux voitures du même âge. Cliquez sur un modèle pour l’ajouter à la comparaison.",
+  i_worst: "Pour chaque classe d’âge choisie : les 3 modèles dont le taux de défauts est le plus au-dessus de la moyenne de cet âge. Le premier chiffre est le taux du modèle, le second l’écart par rapport à la moyenne.<br><br><b>Limites :</b><ul><li>Chaque liste ne regarde qu’une classe d’âge – un modèle peut être mauvais à un âge et meilleur à un autre. Vérifiez ses autres âges dans le tableau ou dans Comparer.</li><li>Seuls les modèles avec ≥ 500 contrôles dans cette classe d’âge sont inclus.</li><li>Un taux de défauts élevé peut aussi refléter l’usage du modèle (p. ex. taxi ou livraison) et son entretien par les propriétaires.</li></ul>",
+});
+Object.assign(window.I18N.de, {
+  rank_best: "Beste", rank_worst: "Schlechteste",
+  worst_h: "Schlechteste Modelle je Alter",
+  worst_sub: "Die 3 Modelle mit den meisten Mängeln im Vergleich zu Autos gleichen Alters. Klicken Sie auf ein Modell, um es zum Vergleich hinzuzufügen.",
+  i_worst: "Für jede gewählte Altersklasse: die 3 Modelle, deren Mängelquote am weitesten über dem Durchschnitt dieses Alters liegt. Die erste Zahl ist die Mängelquote des Modells, die zweite der Vergleich mit dem Durchschnitt.<br><br><b>Grenzen:</b><ul><li>Jede Liste betrachtet nur eine Altersklasse – ein Modell kann in einem Alter schlecht und in einem anderen besser abschneiden. Prüfen Sie die anderen Altersklassen in der Tabelle oder unter Vergleichen.</li><li>Nur Modelle mit ≥ 500 Prüfungen in dieser Altersklasse sind enthalten.</li><li>Eine hohe Mängelquote kann auch an der Nutzung (z. B. als Taxi oder Lieferwagen) und an der Wartung durch die Halter liegen.</li></ul>",
 });
