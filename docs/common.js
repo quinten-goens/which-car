@@ -10,8 +10,7 @@ let LANG = (() => {
   const q = new URLSearchParams(location.search).get("lang");
   if (LANGS.includes(q)) return q;
   const s = load("lang"); if (LANGS.includes(s)) return s;
-  const n = (navigator.language || "").slice(0, 2).toLowerCase();
-  return LANGS.includes(n) ? n : "nl";
+  return "en"; // default for first-time visitors; ?lang= or a saved choice wins
 })();
 const LOCALE = () => window.I18N[LANG]._locale;
 
